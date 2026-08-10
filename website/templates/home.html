@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Home - My Notes{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <h2 class="text-center mb-4">Your Notes</h2>
+
+    <ul class="list-group mb-4" id="notes">
+      {% for note in user.notes %}
+        <li class="list-group-item d-flex justify-content-between align-items-start note-item shadow-sm p-3">
+          <div class="ms-2 me-auto">
+            <div class="fw-bold">{{ note.data }}</div>
+            <small class="text-muted">{{ note.date.strftime('%b %d, %Y at %I:%M %p') }}</small>
+          </div>
+          <button type="button" class="btn-close ms-2" onClick="deleteNote('{{ note.id }}')"></button>
+        </li>
+      {% endfor %}
+    </ul>
+
+    <form method="POST">
+      <textarea name="note" id="note" class="form-control mb-3" rows="4" placeholder="Type a new note..."></textarea>
+      <button type="submit" class="btn btn-success w-100 btn-custom">Add Note</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
