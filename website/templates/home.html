@@ -1,27 +1,108 @@
 {% extends "base.html" %}
-{% block title %}Home - My Notes{% endblock %}
+{% block title %}{% if show_trash %}Trash Bin{% else %}Home{% endif %}{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-8">
-    <h2 class="text-center mb-4">Your Notes</h2>
+<h1 class="text-center mb-4">{% if show_trash %}Trash Bin{% else %}My Notes{% endif %}</h1>
 
-    <ul class="list-group mb-4" id="notes">
-      {% for note in user.notes %}
-        <li class="list-group-item d-flex justify-content-between align-items-start note-item shadow-sm p-3">
-          <div class="ms-2 me-auto">
-            <div class="fw-bold">{{ note.data }}</div>
-            <small class="text-muted">{{ note.date.strftime('%b %d, %Y at %I:%M %p') }}</small>
-          </div>
-          <button type="button" class="btn-close ms-2" onClick="deleteNote('{{ note.id }}')"></button>
-        </li>
-      {% endfor %}
-    </ul>
-
-    <form method="POST">
-      <textarea name="note" id="note" class="form-control mb-3" rows="4" placeholder="Type a new note..."></textarea>
-      <button type="submit" class="btn btn-success w-100 btn-custom">Add Note</button>
-    </form>
+{% if not show_trash %}
+<form method="POST" class="mb-4">
+  <textarea name="note" id="note" class="form-control mb-2" placeholder="Write your note here..."></textarea>
+  <div class="d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center ms-1">
+      <label for="color" class="me-2 fw-bold">Color:</label>
+      <input type="color" id="color" name="color" class="form-control form-control-color" value="{{ user.default_note_color or '#ffffff' }}">
+    </div>
+    <button type="submit" class="btn btn-primary">Add Note</button>
   </div>
+</form>
+
+<div class="mb-4">
+  <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search notes..." onkeyup="filterNotes()">
 </div>
+{% endif %}
+
+<div class="row" id="notesList">
+  {% for note in notes %}
+  <div class="col-md-4 mb-3 note-card" data-text="{{ note.data | lower }}">
+    <div class="card h-100 shadow-sm" style="background-color: {{ note.color }}; color: #000000;">
+      <div class="card-body d-flex flex-column justify-content-between">
+        <div>
+          {% if note.is_pinned and not show_trash %}
+          <span class="badge bg-warning text-dark mb-2">📌 Pinned</span>
+          {% endif %}
+          <p class="card-text" style="white-space: pre-wrap;">{{ note.data }}</p>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary-subtle">
+          <small class="text-muted">{{ note.date.strftime('%Y-%m-%d %H:%M') }}</small>
+
+          <div>
+            {% if not show_trash %}
+            <button type="button" class="btn btn-sm btn-outline-dark me-1" onclick="togglePin('{{ note.id }}')">
+              {% if note.is_pinned %}Unpin{% else %}📌 Pin{% endif %}
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteNote('{{ note.id }}', false)">🗑️ Trash</button>
+            {% else %}
+            <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="restoreNote('{{ note.id }}')">🔄 Restore</button>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteNote('{{ note.id }}', true)">❌ Delete</button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-center text-muted">No notes found.</p>
+  {% endfor %}
+</div>
+
+<script>
+  // Search Filter
+  function filterNotes() {
+    var query = document.getElementById('searchInput').value.toLowerCase();
+    var cards = document.querySelectorAll('.note-card');
+
+    cards.forEach(function(card) {
+      var text = card.getAttribute('data-text');
+      if (text.indexOf(query) !== -1) {
+        card.style.display = '';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+
+  // Toggle Pin
+  function togglePin(noteId) {
+    fetch('/toggle-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ noteId: parseInt(noteId) })
+    }).then(function() {
+      window.location.href = "/";
+    });
+  }
+
+  // Delete Note
+  function deleteNote(noteId, permanent) {
+    fetch('/delete-note', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ noteId: parseInt(noteId), permanent: permanent })
+    }).then(function() {
+      window.location.reload();
+    });
+  }
+
+  // Restore Note
+  function restoreNote(noteId) {
+    fetch('/restore-note', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ noteId: parseInt(noteId) })
+    }).then(function() {
+      window.location.href = "/trash";
+    });
+  }
+</script>
 {% endblock %}
